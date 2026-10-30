@@ -1,0 +1,816 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Positioning Gap Analyzer</title>
+<style>
+:root{
+  --bg:#f7f6f3; --card:#ffffff; --ink:#1c1b19; --muted:#6b675f; --line:#e4e1da;
+  --accent:#c2410c; --accent-soft:#fdeee6; --blue:#2f5f98; --good:#2f7d4f; --bad:#b4332b; --warn:#a8710a;
+  --heat:194,65,12;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#151412; --card:#1f1d1a; --ink:#f0eee9; --muted:#a09b91; --line:#35322d;
+    --accent:#f08a5d; --accent-soft:#3a2418; --blue:#7fb0e6; --good:#6cc08b; --bad:#f08178; --warn:#e4b04a;
+    --heat:240,138,93;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#151412; --card:#1f1d1a; --ink:#f0eee9; --muted:#a09b91; --line:#35322d;
+  --accent:#f08a5d; --accent-soft:#3a2418; --blue:#7fb0e6; --good:#6cc08b; --bad:#f08178; --warn:#e4b04a;
+  --heat:240,138,93;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:1080px;margin:0 auto;padding:24px 16px 80px}
+h1{font-size:26px;margin:0 0 4px;letter-spacing:-.01em}
+h2{font-size:18px;margin:0 0 4px}
+h3{font-size:15px;margin:16px 0 6px}
+p.sub{color:var(--muted);margin:0 0 16px}
+.top{display:flex;gap:12px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+button{font:inherit;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:7px 12px;border-radius:8px;cursor:pointer}
+button:hover{border-color:var(--accent)}
+button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+button.danger{color:var(--bad)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px;margin:16px 0}
+.step{display:inline-block;background:var(--accent-soft);color:var(--accent);font-weight:600;font-size:12px;padding:2px 8px;border-radius:99px;margin-bottom:6px}
+label{font-size:13px;color:var(--muted);display:block;margin-bottom:3px}
+input[type=text],input[type=number],textarea,select{width:100%;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:7px 9px}
+textarea{min-height:110px;resize:vertical}
+.grid{display:grid;gap:12px}
+.g2{grid-template-columns:1fr 1fr}
+.brand{border:1px solid var(--line);border-radius:10px;padding:12px;background:var(--bg)}
+.brand.you{border-color:var(--accent);background:var(--accent-soft)}
+.brand .row{display:grid;grid-template-columns:1fr 110px;gap:8px;margin-bottom:8px}
+.tag{font-size:11px;font-weight:600;color:var(--accent)}
+.tbl{width:100%;border-collapse:collapse;font-size:13.5px}
+.tbl th,.tbl td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
+.tbl th{font-weight:600;color:var(--muted);font-size:12px}
+.tbl td.num,.tbl th.num{text-align:right;font-variant-numeric:tabular-nums}
+.tbl select,.tbl input{padding:4px 6px;width:auto}
+.scroll{overflow-x:auto}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.kpi{border:1px solid var(--line);border-radius:10px;padding:12px;background:var(--card)}
+.kpi .v{font-size:26px;font-weight:700;letter-spacing:-.02em}
+.kpi .l{font-size:12px;color:var(--muted)}
+.kpi .d{font-size:12px;margin-top:2px}
+.good{color:var(--good)} .bad{color:var(--bad)} .warn{color:var(--warn)} .muted{color:var(--muted)}
+.insight{border-left:4px solid var(--line);padding:10px 14px;margin:10px 0;background:var(--bg);border-radius:0 8px 8px 0}
+.insight.opportunity{border-color:var(--good)}
+.insight.threat{border-color:var(--bad)}
+.insight.strength{border-color:var(--blue)}
+.insight.watch{border-color:var(--warn)}
+.insight .t{font-weight:600}
+.insight .e{color:var(--muted);font-size:13.5px}
+.insight .a{font-size:13.5px;margin-top:3px}
+.badge{display:inline-block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-right:6px}
+.opportunity .badge{color:var(--good)} .threat .badge{color:var(--bad)} .strength .badge{color:var(--blue)} .watch .badge{color:var(--warn)}
+.heat td.c{text-align:center;font-variant-numeric:tabular-nums;min-width:64px}
+.bar{height:8px;border-radius:4px;background:var(--line);overflow:hidden;min-width:80px}
+.bar>i{display:block;height:100%;background:var(--accent)}
+svg text{fill:var(--muted);font-size:11px}
+svg .lbl{fill:var(--ink);font-size:12px}
+.note{font-size:12.5px;color:var(--muted)}
+.empty{color:var(--muted);padding:16px;text-align:center}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.tbl td:first-child,.tbl th:first-child{position:sticky;left:0;background:var(--card);z-index:1}
+#scoreTbl{min-width:560px}
+@media (max-width:640px){
+  .wrap{padding:16px 12px 60px}
+  h1{font-size:22px}
+  .g2{grid-template-columns:1fr}
+  .brand .row{grid-template-columns:1fr 90px}
+  .card{padding:14px}
+  .btns button{flex:1 1 auto}
+  .kpi .v{font-size:22px}
+  #scoreTbl td:first-child input{min-width:150px}
+}
+@media print{.noprint{display:none!important}body{background:#fff}.card{break-inside:avoid}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div>
+      <h1>Positioning Gap Analyzer</h1>
+      <p class="sub">Compare your brand with competitors on messaging, scorecard and price. Get metrics, white-space themes and prioritised moves.</p>
+    </div>
+    <div class="btns noprint">
+      <button id="btnTheme" aria-label="Toggle light or dark theme">Theme</button>
+      <button id="btnImport">Import data</button>
+      <input type="file" id="fileImport" accept="application/json,.json" hidden>
+      <button id="btnSample">Load sample data</button>
+      <button id="btnClear" class="danger">Reset</button>
+    </div>
+  </div>
+
+  <div class="card noprint">
+    <span class="step">Step 1</span>
+    <h2>Brands and their messaging</h2>
+    <p class="note">Add your brand plus 2-6 competitors. Paste each brand's homepage / product page / ad copy (about 60+ words works best). Price is the typical entry price of a hero product.</p>
+    <div class="grid g2" style="margin-bottom:10px">
+      <div><label for="category">Category / market</label><input type="text" id="category" placeholder="e.g. Natural skincare in India"></div>
+      <div><label for="currency">Currency symbol</label><input type="text" id="currency" value="₹" style="max-width:100px"></div>
+    </div>
+    <div id="brands" class="grid g2"></div>
+    <div style="margin-top:10px"><button id="btnAddBrand">+ Add competitor</button></div>
+  </div>
+
+  <div class="card noprint">
+    <span class="step">Step 2</span>
+    <h2>Scorecard</h2>
+    <p class="note">Score each brand 1 (weak) to 5 (excellent) on the factors that drive choice in this category. Set the weight (1-5) by how much customers care. Rename or add factors to fit your market.</p>
+    <div class="scroll"><table class="tbl" id="scoreTbl"></table></div>
+    <div style="margin-top:10px"><button id="btnAddDim">+ Add factor</button></div>
+  </div>
+
+  <div class="card noprint">
+    <span class="step">Step 3 · optional</span>
+    <h2>Customise keywords</h2>
+    <p class="note">The defaults suit consumer brands. Edit them to fit your category: add your own themes and complaint topics, or rename and remove existing ones. Reviews added in Step 1 feed the Voice of Customer analysis.</p>
+    <details><summary><b>Edit keyword lists</b></summary><div id="lexicon" style="margin-top:10px"></div></details>
+  </div>
+
+  <div id="results"></div>
+</div>
+
+<script>
+"use strict";
+/* ---------- Theme lexicon: stems matched at the start of each word ---------- */
+const DEFAULT_THEMES = {
+  "Value / price":      ["afford","cheap","save","saving","discount","offer","deal","value","budget","bundle","freeship","price","cost","pocket"],
+  "Quality / efficacy": ["quality","effective","effica","clinical","tested","result","proven","potent","formula","dermatolog","visible","performance"],
+  "Natural / clean":    ["natural","organic","plant","herb","ayurved","botanic","clean","chemical","vegan","cruelty","toxin","paraben","ingredient"],
+  "Trust / proof":      ["trust","certif","guarantee","review","rated","customers","safe","authentic","genuine","award","approved","refund","money-back"],
+  "Innovation / science":["science","innovat","patent","technolog","advanced","lab","research","breakthrough","smart","engineer","peptide","study"],
+  "Luxury / premium":   ["luxur","luxe","premium","indulg","exclusive","elegan","artisan","crafted","handcraft","signature","ritual","rare"],
+  "Convenience":        ["easy","simple","quick","fast","deliver","subscri","doorstep","hassle","minutes","routine","steps","effortless"],
+  "Community / culture":["communit","together","join","tribe","creator","family","movement","inspir","culture","generation","belong"],
+  "Sustainability":     ["sustainab","eco","recycl","planet","ethical","refill","biodegrad","carbon","responsib","waste","earth"],
+  "Identity / emotion": ["confiden","feel","joy","self","radian","empower","bold","express","glow","beautiful","happy","love"]
+};
+const EMOTIVE = ["love","feel","glow","joy","confiden","dream","beautiful","happy","radian","passion","story","indulg","empower","bold","delight","wisdom"];
+const RATIONAL = ["ingredient","percent","clinical","tested","formula","dermatolog","result","study","proven","concentrat","patent","technolog","days","rated","certif"];
+const SUPERLATIVE = ["best","#1","number one","leading","ultimate","finest","unmatched","most","greatest","world-class"];
+const CTAS = ["shop now","buy now","add to cart","get started","sign up","subscribe","try ","order ","book ","join ","learn more","claim","discover","start "];
+const PROOF_WORDS = ["review","rated","certif","tested","clinical","award","guarantee","study","approved","customers","happy"];
+/* Complaint topics are matched as substrings inside review text */
+const DEFAULT_PAINS = [
+  {name:"Delivery & packaging", words:["deliver","packag","shipping","courier","delay","damaged","leak","arrived late","spill"]},
+  {name:"Side effects / defects", words:["rash","irritat","breakout","allerg","burn","itch","sting","redness","defect","faulty","broke","stopped working"]},
+  {name:"Price / value", words:["expens","overpric","pricey","costly","waste of money","cannot afford"]},
+  {name:"Feel / fragrance", words:["greasy","sticky","smell","scent","fragrance","texture","heavy","artificial"]},
+  {name:"No results", words:["no result","didn't work","doesn't work","did not work","no difference","no visible","useless","results are slow"]},
+  {name:"Customer service", words:["support","refund","return","response","rude","ignored","no reply"]}
+];
+const POS=["love","great","good","amazing","excellent","best","perfect","nice","soft","smooth","glow","effective","happy","satisf","recommend","fantastic","awesome","worth","gentle","fresh","improv","clear","lovely","wonderful","impress","works","affordable","beautiful","luxur","elegant","clean"];
+const NEG=["bad","worst","terrible","awful","hate","disappoint","waste","useless","poor","rash","irritat","breakout","allerg","burn","itch","expens","overpric","pricey","costly","damaged","leak","late","delay","fake","harsh","greasy","sticky","scam","broke","ignored","artificial","cheap","slow","strong"];
+const NEGATORS=["not","no","never","didn't","doesn't","isn't","wasn't","don't","cannot","can't","hardly","without"];
+let THEMES={}, THEME_NAMES=[];
+function fixState(s){
+  if(!Array.isArray(s.themes)||!s.themes.length) s.themes=Object.entries(DEFAULT_THEMES).map(([name,words])=>({name,words:words.slice()}));
+  if(!Array.isArray(s.pains)||!s.pains.length) s.pains=DEFAULT_PAINS.map(p=>({name:p.name,words:p.words.slice()}));
+  s.brands.forEach(b=>{ if(typeof b.reviews!=="string") b.reviews=""; });
+  return s;
+}
+function applyLexicon(){
+  fixState(state);
+  THEMES={}; state.themes.forEach(t=>{THEMES[t.name]=t.words;});
+  THEME_NAMES=Object.keys(THEMES);
+}
+function sentiment(text){
+  const t=tokens(text); let pos=0,neg=0;
+  t.forEach((w,i)=>{
+    const p=POS.some(s=>w.startsWith(s)), n=!p&&NEG.some(s=>w.startsWith(s));
+    if(!p&&!n) return;
+    const flip=t.slice(Math.max(0,i-2),i).some(x=>NEGATORS.includes(x));
+    if(p!==flip) pos++; else neg++;
+  });
+  return (pos+neg)? (pos-neg)/(pos+neg) : 0;
+}
+function vocFor(b){
+  const revs=(b.reviews||"").split(/\n+/).map(s=>s.trim()).filter(s=>tokens(s).length>=3);
+  const n=revs.length; if(!n) return null;
+  const rows=revs.map(r=>{
+    const tk=tokens(r), low=r.toLowerCase(), s=sentiment(r);
+    return {s, themes:THEME_NAMES.filter(t=>countStems(tk,THEMES[t])>0),
+      pains:state.pains.filter(p=>s<=0.2&&p.words.some(w=>low.includes(w))).map(p=>p.name)};
+  });
+  const themes={}, pains={};
+  THEME_NAMES.forEach(t=>{ const hit=rows.filter(r=>r.themes.includes(t)); themes[t]={pct:hit.length/n*100, sent:mean(hit.map(r=>r.s))}; });
+  state.pains.forEach(p=>{ pains[p.name]=rows.filter(r=>r.pains.includes(p.name)).length/n*100; });
+  return {n, enough:n>=5, pos:rows.filter(r=>r.s>0.15).length/n*100, neg:rows.filter(r=>r.s<-0.15).length/n*100,
+    avg:mean(rows.map(r=>r.s)), themes, pains};
+}
+const THEME_PHRASE = {
+  "Value / price":"gives people more for their money",
+  "Quality / efficacy":"delivers results people can see",
+  "Natural / clean":"keeps ingredients honest and clean",
+  "Trust / proof":"backs every claim with proof",
+  "Innovation / science":"is built on real science",
+  "Luxury / premium":"makes everyday use feel like an indulgence",
+  "Convenience":"fits effortlessly into daily life",
+  "Community / culture":"belongs to a community people want to join",
+  "Sustainability":"is kinder to the planet",
+  "Identity / emotion":"helps people feel like themselves"
+};
+function summarise(o){
+  const me=o.brands.find(b=>b.isYou); if(!me) return null;
+  const rkS=rank(o.brands,"score",me), rkD=rank(o.brands,"distinct",me);
+  const risk=o.insights.find(i=>i.type==="threat"), opp=o.insights.find(i=>i.type==="opportunity");
+  const parts=[`${me.name} ranks ${rkS?rkS.pos+" of "+rkS.of:"-"} on the weighted scorecard${rkD?` and ${rkD.pos} of ${rkD.of} on messaging distinctiveness`:""}${me.priceIdx?`, at a price index of ${Math.round(me.priceIdx)}`:""}.`];
+  if(risk) parts.push(`Biggest risk: ${risk.title}.`);
+  if(opp) parts.push(`Biggest opening: ${opp.title}.`);
+  // positioning angle: unclaimed theme first, then a theme you own, then your strongest theme
+  let angle=THEME_NAMES.find(t=>o.themes[t].white);
+  let basis="unclaimed by any competitor";
+  if(!angle){ angle=THEME_NAMES.find(t=>o.themes[t].owner&&o.themes[t].owner.isYou); basis="a theme you already own"; }
+  if(!angle){ angle=THEME_NAMES.slice().sort((a,b)=>me.theme[b]-me.theme[a])[0]; basis="your strongest current theme"; }
+  const edge=o.gaps.filter(g=>g.gap<=0).sort((a,b)=>b.you*b.weight-a.you*a.weight)[0];
+  const stmt=`For [target customer], ${me.name} is the choice in ${state.category?state.category.replace(/\s*\(.*\)\s*$/,""):"[category]"} that ${THEME_PHRASE[angle]||"stands for "+angle.toLowerCase()}${edge?`, proven by ${edge.dim.toLowerCase()}`:""}.`;
+  return {text:parts.join(" "), angle, basis, stmt};
+}
+const OWN_MIN = 1.0, WHITE_MAX = 0.8;
+
+/* ---------- State ---------- */
+const DEFAULT_DIMS = [
+  {name:"Product efficacy & proof", weight:5},
+  {name:"Brand story clarity", weight:4},
+  {name:"Price-value perception", weight:5},
+  {name:"Reviews & social proof", weight:4},
+  {name:"Website / buying experience", weight:3},
+  {name:"Content & community", weight:3},
+  {name:"Availability / distribution", weight:3}
+];
+let state = blank();
+function blank(){
+  return fixState({category:"", currency:"₹", dims:DEFAULT_DIMS.map(d=>({...d})),
+    brands:[mkBrand("Your brand",true), mkBrand("Competitor A"), mkBrand("Competitor B")]});
+}
+function mkBrand(name,isYou){
+  return {name, isYou:!!isYou, price:"", copy:"", reviews:"", scores:DEFAULT_DIMS.map(()=>3)};
+}
+const SAMPLE = {
+  category:"Natural skincare in India (illustrative sample, fictional brands)", currency:"₹",
+  dims:DEFAULT_DIMS.map(d=>({...d})),
+  brands:[
+    {name:"Aurea Naturals", isYou:true, price:649, scores:[3,4,3,3,4,4,3],
+     copy:"Aurea Naturals brings the wisdom of Ayurveda to your everyday routine. Our plant-based formulas are made with organic botanicals, free from parabens and harsh chemicals. Feel radiant, feel like yourself. Discover simple rituals for glowing skin. Shop now and join our community of happy customers who love the way their skin feels."},
+    {name:"DermaPure", isYou:false, price:1299, scores:[5,3,2,5,4,2,4],
+     copy:"Clinically tested. Dermatologist approved. DermaPure's patented peptide technology delivers visible results in 14 days, proven in a study of 120 people. Rated 4.6 by over 30,000 customers. Advanced science for your skin, backed by a money-back guarantee. Certified safe for sensitive skin. Shop now."},
+    {name:"Rootsy", isYou:false, price:799, scores:[3,4,3,3,3,3,4],
+     copy:"Natural skincare made from herbs and organic ingredients. Vegan, cruelty-free and paraben-free. Plant-powered formulas you can trust, with clean ingredients and no toxins. Eco-friendly packaging and refill options for a better planet. Shop now and try our natural range today."},
+    {name:"LuxeLeaf", isYou:false, price:2499, scores:[4,5,1,3,5,4,2],
+     copy:"Indulge in the signature ritual of luxury skincare. Handcrafted with rare botanicals, an exclusive collection for those who deserve elegance. Premium quality, artisan made in small batches. Feel the luxury, feel confident. Discover the collection."},
+    {name:"ValueGlow", isYou:false, price:399, scores:[2,2,5,4,4,3,5],
+     copy:"Glowing skin at affordable prices! Save up to 40% on bundles and enjoy free shipping on every order. Easy, quick routines in just 3 steps. Great quality at a price you will love. Buy now and save more with our best deals. Fast delivery to your doorstep."}
+  ]
+};
+
+const SAMPLE_REVIEWS = {
+  "Aurea Naturals":["Love how gentle it is on my sensitive skin, feels really natural","Smells lovely and the texture is smooth, great for my daily routine","Delivery was late by a week and the bottle was leaking","Packaging was damaged, had to ask for a refund and support was slow","Good natural ingredients but I saw no results after a month","My skin feels soft and happy, will recommend to friends","Worth the price, much cheaper than other natural brands","Great value and gentle formula, love it","Courier delay again, but the product itself is amazing","Tiny bottle, finished in two weeks and no visible difference"],
+  "DermaPure":["Visible results in two weeks, clinically proven and it works","Very effective but way too expensive for the quantity","Caused a rash and breakout on my cheeks, had to stop","Works great, dermatologist recommended and I trust it","Overpriced, I can get similar results for less","Skin is clear and I love the results","Burning sensation and redness the first week","Fantastic serum, expensive but worth it","Too pricey, will not repurchase","Excellent quality and fast delivery"],
+  "Rootsy":["Love that it is vegan and chemical free, feels clean","Eco packaging is a nice touch, the refill pouch is great","Smell is strong and the texture is sticky","No results at all, waste of money","Natural ingredients and gentle, my skin feels fresh","Delivery was quick and packaging was neat","Fragrance is too heavy for me","Didn't work for my pigmentation","Good for the planet and good for skin, happy","Nice brand but results are slow"],
+  "LuxeLeaf":["Luxurious texture and feels like a spa ritual, love it","Beautiful packaging, makes a wonderful gift","Way too expensive for what it does","Elegant and smooth, my skin feels amazing","Overpriced, no visible difference","Delivery took ages and the box was damaged","Premium feel, I feel confident using it","Lovely scent and gentle, worth it for special occasions","Costly for daily use, cannot afford to repurchase","Great quality but pricey"],
+  "ValueGlow":["Super affordable and great deals, love the bundle","Quick delivery and easy routine","Caused breakouts and itching, harsh formula","Cheap quality, packaging broke in transit","Good for the price, does the basics","Skin felt irritated after two days, not recommended","Amazing value, will buy again","Support ignored my refund request, terrible","Smells artificial and feels greasy","Works okay for the price, happy"]
+};
+SAMPLE.brands.forEach(b=>{ b.reviews=(SAMPLE_REVIEWS[b.name]||[]).join("\n"); });
+
+/* ---------- Helpers ---------- */
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const mean = a => a.length ? a.reduce((x,y)=>x+y,0)/a.length : 0;
+const round = (n,d=1) => { const p=Math.pow(10,d); return Math.round(n*p)/p; };
+const tokens = t => (t.toLowerCase().match(/[a-z0-9#%'\-]+/g)||[]);
+function syllables(w){
+  w=w.toLowerCase().replace(/[^a-z]/g,"");
+  if(!w) return 0;
+  if(w.length<=3) return 1;
+  w=w.replace(/(?:[^laeiouy]es|ed|[^laeiouy]e)$/,"").replace(/^y/,"");
+  const m=w.match(/[aeiouy]{1,2}/g);
+  return m?m.length:1;
+}
+function flesch(text){
+  const sentences=Math.max(1,(text.match(/[.!?]+/g)||[]).length);
+  const words=(text.match(/[A-Za-z']+/g)||[]);
+  if(words.length<5) return null;
+  const syl=words.reduce((s,w)=>s+syllables(w),0);
+  return 206.835-1.015*(words.length/sentences)-84.6*(syl/words.length);
+}
+const countStems = (toks,stems) => toks.filter(t=>stems.some(s=>t.startsWith(s))).length;
+const fmtMoney = n => state.currency+(Math.round(n)).toLocaleString("en-IN");
+
+/* ---------- Analysis engine ---------- */
+function analyse(){
+  const brands = state.brands;
+  const you = brands.find(b=>b.isYou);
+  const ready = brands.filter(b=>tokens(b.copy).length>=15);
+  const out = {you, brands:[], themes:{}, ready:ready.length, warnings:[]};
+  if(!you) out.warnings.push("Mark one brand as yours.");
+  if(brands.length<2) out.warnings.push("Add at least one competitor.");
+
+  brands.forEach((b,i)=>{
+    const toks=tokens(b.copy), n=toks.length;
+    const per100 = c => n? c*100/n : 0;
+    const theme = {};
+    THEME_NAMES.forEach(t=>theme[t]=per100(countStems(toks,THEMES[t])));
+    const lower=b.copy.toLowerCase();
+    const ctas=CTAS.reduce((s,c)=>s+(lower.split(c).length-1),0);
+    const nums=(b.copy.match(/\d[\d,.]*%?/g)||[]).length;
+    const proofHits=countStems(toks,PROOF_WORDS)+nums;
+    const emo=countStems(toks,EMOTIVE), rat=countStems(toks,RATIONAL);
+    const sup=SUPERLATIVE.reduce((s,w)=>s+(lower.split(w).length-1),0);
+    const total=b.scores.reduce((s,v,k)=>s+v*(state.dims[k]?state.dims[k].weight:0),0);
+    const wsum=state.dims.reduce((s,d)=>s+d.weight,0)||1;
+    const price=parseFloat(b.price);
+    out.brands.push({
+      i, name:b.name||("Brand "+(i+1)), isYou:b.isYou, words:n, theme,
+      voc:vocFor(b), flesch:flesch(b.copy), ctas, proof:per100(proofHits), superlatives:sup,
+      emotive: (emo+rat)? emo/(emo+rat)*100 : null,
+      score: total/wsum/5*100, price: isFinite(price)&&price>0?price:null, hasCopy:n>=15
+    });
+  });
+
+  const withCopy = out.brands.filter(b=>b.hasCopy);
+  const prices = out.brands.filter(b=>b.price).map(b=>b.price);
+  out.avgPrice = prices.length? mean(prices):null;
+  out.brands.forEach(b=>{
+    b.priceIdx = (b.price&&out.avgPrice)? b.price/out.avgPrice*100 : null;
+    b.valueRatio = (b.priceIdx)? b.score/(b.priceIdx/100) : null;
+  });
+  out.avgScore = mean(out.brands.map(b=>b.score));
+
+  // theme ownership
+  THEME_NAMES.forEach(t=>{
+    const vals = withCopy.map(b=>({name:b.name,isYou:b.isYou,v:b.theme[t]})).sort((a,b)=>b.v-a.v);
+    const top=vals[0], second=vals[1];
+    const users = vals.filter(x=>x.v>=OWN_MIN);
+    out.themes[t]={
+      max: top?top.v:0,
+      owner: top && top.v>=OWN_MIN && (!second || top.v>=second.v*1.5)? top : null,
+      users, white: !top || top.v<WHITE_MAX,
+      crowded: withCopy.length>=3 && users.length>=Math.ceil(withCopy.length*0.6)
+    };
+  });
+
+  // distinctiveness: cosine distance to mean of the others
+  withCopy.forEach(b=>{
+    const others=withCopy.filter(o=>o!==b);
+    if(!others.length){b.distinct=null;return;}
+    const m=THEME_NAMES.map(t=>mean(others.map(o=>o.theme[t])));
+    const v=THEME_NAMES.map(t=>b.theme[t]);
+    const dot=v.reduce((s,x,k)=>s+x*m[k],0);
+    const nv=Math.sqrt(v.reduce((s,x)=>s+x*x,0)), nm=Math.sqrt(m.reduce((s,x)=>s+x*x,0));
+    b.distinct = (nv&&nm)? Math.min(100,Math.round((1-dot/(nv*nm))*100)) : null;
+  });
+  out.brands.forEach(b=>{ if(b.distinct===undefined) b.distinct=null; });
+
+  // scorecard gaps (you vs best competitor)
+  out.gaps=[];
+  if(you){
+    const y=brands.indexOf(you), comps=brands.filter(b=>!b.isYou);
+    if(comps.length){
+      state.dims.forEach((d,k)=>{
+        let best=comps[0];
+        comps.forEach(c=>{ if(c.scores[k]>best.scores[k]) best=c; });
+        const avg=mean(comps.map(c=>c.scores[k]));
+        out.gaps.push({dim:d.name,weight:d.weight,you:you.scores[k],best:best.scores[k],bestName:best.name||"competitor",
+          gap:best.scores[k]-you.scores[k], vsAvg:you.scores[k]-avg});
+      });
+    }
+  }
+  out.insights = buildInsights(out);
+  return out;
+}
+
+function rank(list,key,me,desc=true){
+  const arr=list.filter(x=>x[key]!==null&&x[key]!==undefined).sort((a,b)=>desc?b[key]-a[key]:a[key]-b[key]);
+  const idx=arr.indexOf(me);
+  return idx<0?null:{pos:idx+1,of:arr.length};
+}
+
+function buildInsights(o){
+  const ins=[]; const me=o.brands.find(b=>b.isYou);
+  if(!me) return ins;
+  const comps=o.brands.filter(b=>!b.isYou), compsCopy=comps.filter(b=>b.hasCopy);
+  const add=(type,title,evidence,action,impact)=>ins.push({type,title,evidence,action,impact});
+
+  if(me.hasCopy){
+    THEME_NAMES.forEach(t=>{
+      const th=o.themes[t], mine=me.theme[t];
+      if(th.white){
+        add("opportunity",`Nobody owns "${t}"`,
+          `No brand in this set uses it meaningfully (highest is ${round(th.max,2)} mentions per 100 words, threshold ${WHITE_MAX}).`,
+          `Test whether customers care about ${t.toLowerCase()}. If yes, claim it with proof before a competitor does.`,
+          55+ (mine<WHITE_MAX?10:0));
+      } else if(th.owner && !th.owner.isYou){
+        const gapUsers=th.users.filter(u=>!u.isYou).length;
+        if(mine<OWN_MIN) add("threat",`${th.owner.name} owns "${t}" and you are silent on it`,
+          `${th.owner.name} scores ${round(th.owner.v,1)} per 100 words, you score ${round(mine,1)}.`,
+          `Either avoid direct competition here, or build a sharper, provable claim that differs from ${th.owner.name}.`,
+          45+gapUsers*5);
+      } else if(th.owner && th.owner.isYou){
+        add("strength",`You own "${t}"`,
+          `You score ${round(mine,1)} per 100 words, at least 1.5x any competitor.`,
+          `Protect it: repeat it across product pages, ads and packaging, and back it with proof.`,60);
+      }
+      if(th.crowded && mine>=OWN_MIN){
+        add("watch",`"${t}" is a crowded claim`,
+          `${th.users.length} of ${o.ready} brands lean on it, including you (${round(mine,1)} per 100 words).`,
+          `Differentiate inside the theme (a specific proof point or ingredient) or shift emphasis to a less crowded theme.`,50);
+      }
+    });
+    if(me.distinct!==null){
+      const rk=rank(o.brands,"distinct",me);
+      if(rk){
+        const low=me.distinct<=15, high=rk.pos===1;
+        add(low?"threat":high?"strength":"watch",
+          low?"Your messaging blends in":high?"Your messaging is the most distinctive":`Distinctiveness rank ${rk.pos} of ${rk.of}`,
+          `Distinctiveness score ${me.distinct}/100 (rank ${rk.pos} of ${rk.of}).`,
+          low?"Pick one theme to lead with and cut generic claims that competitors also make.":"Keep the distinctive angle, and make sure it connects to something customers want.",
+          low?65:40);
+      }
+    }
+  }
+
+  // voice of customer: what you say vs what customers say
+  const v=me.voc;
+  if(v&&v.enough){
+    THEME_NAMES.forEach(t=>{
+      const s=v.themes[t], say=me.theme[t];
+      if(s.pct>=25 && s.sent>=0.2 && say<OWN_MIN) add("opportunity",`Customers praise "${t}" but your copy doesn't say it`,
+        `${Math.round(s.pct)}% of your reviews mention it, mostly positively (sentiment ${round(s.sent,2)}), but your copy uses it only ${round(say,1)} per 100 words.`,
+        `Lift real review language about ${t.toLowerCase()} into headlines, ads and product pages.`,72);
+      else if(say>=OWN_MIN && s.pct<10 && v.n>=8) add("watch",`You promote "${t}" but customers rarely mention it`,
+        `Your copy uses it ${round(say,1)} per 100 words, but only ${Math.round(s.pct)}% of reviews mention it.`,
+        `Check whether this claim lands. Test shifting space to what customers actually talk about.`,52);
+      if(say>=OWN_MIN && s.pct>=15 && s.sent<=-0.1) add("threat",`Reviews contradict your "${t}" claim`,
+        `${Math.round(s.pct)}% of reviews mention it with negative sentiment (${round(s.sent,2)}).`,
+        `Fix the product or soften the claim before it hurts conversion and trust.`,78);
+    });
+    const pain=Object.entries(v.pains).sort((a,b)=>b[1]-a[1])[0];
+    if(pain && pain[1]>=15) add("threat",`Top customer complaint: ${pain[0]}`,
+      `${Math.round(pain[1])}% of your reviews raise it.`,
+      `Find the root cause in the raw reviews, fix it in product or operations, and pre-empt it in your messaging.`,Math.min(85,50+pain[1]));
+    comps.filter(c=>c.voc&&c.voc.enough).forEach(c=>{
+      state.pains.forEach(p=>{
+        const cp=c.voc.pains[p.name]||0, mine=v.pains[p.name]||0;
+        if(cp>=25 && mine<10) add("opportunity",`${c.name} is weak on: ${p.name}`,
+          `${Math.round(cp)}% of ${c.name} reviews raise it, vs ${Math.round(mine)}% of yours.`,
+          `Make ${p.name.toLowerCase()} a visible strength in your messaging, using proof you can back up.`,66);
+      });
+    });
+    const ranked=o.brands.filter(b=>b.voc&&b.voc.enough).sort((a,b)=>b.voc.avg-a.voc.avg);
+    const pos=ranked.indexOf(me);
+    if(ranked.length>=3 && pos===0) add("strength","Happiest customers in the set",`Average review sentiment ${round(v.avg,2)}, highest of ${ranked.length} brands.`,"Turn this into proof: ratings, testimonials and UGC.",50);
+    else if(ranked.length>=3 && pos===ranked.length-1) add("threat","Lowest customer sentiment in the set",`Average review sentiment ${round(v.avg,2)}, lowest of ${ranked.length} brands.`,"Prioritise fixing the top complaint before spending on acquisition.",70);
+  }
+
+  // scorecard gaps
+  const bigGaps=o.gaps.filter(g=>g.gap>0).sort((a,b)=>b.gap*b.weight-a.gap*a.weight);
+  bigGaps.slice(0,2).forEach(g=>add("threat",`Weakest area: ${g.dim}`,
+    `You score ${g.you}/5 vs ${g.best}/5 for ${g.bestName} (weight ${g.weight}/5).`,
+    `Closing this gap moves your weighted score the most. Set a concrete improvement target for this quarter.`,
+    Math.min(95,40+g.gap*g.weight*5)));
+  o.gaps.filter(g=>g.gap<=0 && g.you>=4).sort((a,b)=>b.weight-a.weight).slice(0,1).forEach(g=>add("strength",
+    `Competitive edge: ${g.dim}`,`You score ${g.you}/5, level with or ahead of every competitor.`,
+    `Make this visible in your messaging. Strengths customers can't see don't count.`,45));
+
+  // price / value
+  if(me.price && o.avgPrice){
+    const cheaper=me.priceIdx<95, dearer=me.priceIdx>105;
+    const rkS=rank(o.brands,"score",me), rkV=rank(o.brands,"valueRatio",me);
+    if(dearer && rkS && rkS.pos>Math.ceil(rkS.of/2)) add("threat","Priced above average without a quality lead",
+      `Price index ${Math.round(me.priceIdx)} (market avg = 100) but your scorecard ranks ${rkS.pos} of ${rkS.of}.`,
+      `Either strengthen proof of quality to justify the premium, or test a lower entry price or bundle.`,80);
+    else if(cheaper && rkS && rkS.pos<=Math.floor(rkS.of/2)) add("opportunity","Under-priced for your quality",
+      `Price index ${Math.round(me.priceIdx)} while your scorecard ranks ${rkS.pos} of ${rkS.of}.`,
+      `Test a price rise or premium variant. Check discounting habits first.`,70);
+    else if(rkV) add("watch",`Value-for-money rank ${rkV.pos} of ${rkV.of}`,
+      `Score ${round(me.score,0)}/100 at price index ${Math.round(me.priceIdx)}.`,
+      `Track this ratio over time. It should rise with every improvement you ship.`,35);
+  }
+
+  // proof, tone, readability
+  if(me.hasCopy && compsCopy.length){
+    const avgProof=mean(compsCopy.map(c=>c.proof));
+    if(avgProof>0 && me.proof<avgProof*0.7) add("threat","Thin on proof compared with the market",
+      `Proof density ${round(me.proof,1)} per 100 words vs market average ${round(avgProof,1)}.`,
+      `Add numbers, review counts, certifications, test results and guarantees near every claim.`,
+      Math.min(85,50+(avgProof-me.proof)*4));
+    else if(me.proof>avgProof*1.3 && avgProof>0) add("strength","Strong proof density",
+      `Proof density ${round(me.proof,1)} vs market average ${round(avgProof,1)} per 100 words.`,
+      `Keep leading with evidence. Test putting your strongest stat above the fold.`,40);
+    const emoAvg=mean(compsCopy.filter(c=>c.emotive!==null).map(c=>c.emotive));
+    if(me.emotive!==null && !isNaN(emoAvg) && Math.abs(me.emotive-emoAvg)>=30){
+      const more=me.emotive>emoAvg;
+      add("watch",more?"Your tone is more emotional than the market":"Your tone is more rational than the market",
+        `${Math.round(me.emotive)}% emotive vs ${Math.round(emoAvg)}% market average.`,
+        more?"Good for differentiation. Make sure at least one hard proof point sits beside the emotion.":
+             "Rational claims are easy to copy. Add a story or identity angle that competitors do not have.",38);
+    }
+    if(me.flesch!==null && me.flesch<45) add("watch","Copy is hard to read",
+      `Reading ease ${Math.round(me.flesch)} (60+ is easy for a general audience).`,
+      `Shorten sentences and cut jargon. Simple copy converts better on mobile.`,35);
+    if(me.ctas===0) add("watch","No clear call to action in your copy","No phrases like 'shop now' or 'get started' were found.",
+      "End each block of copy with one clear next step.",42);
+  }
+  ins.forEach(i=>i.impact=Math.round(i.impact)); return ins.sort((a,b)=>b.impact-a.impact);
+}
+
+/* ---------- Rendering: inputs ---------- */
+function wordNote(copy){
+  const n=tokens(copy).length;
+  if(n>=60) return `${n} words · good sample`;
+  if(n>=15) return `${n} words · usable, 60+ gives steadier results`;
+  return `<span class="warn">${n} words · need at least 15 to be included in the analysis</span>`;
+}
+function reviewNote(txt){
+  const n=(txt||"").split(/\n+/).filter(s=>tokens(s).length>=3).length;
+  return n>=5?`${n} reviews · included`:`<span class="warn">${n} review${n===1?"":"s"} · need at least 5 to analyse</span>`;
+}
+function lexRows(kind){
+  return state[kind].map((e,i)=>`<div class="brand" style="margin-bottom:8px">
+    <div class="row"><div><label>Name</label><input type="text" data-lx="${kind}" data-i="${i}" data-lf="name" value="${esc(e.name)}"></div>
+    <div><label>&nbsp;</label><button class="danger" data-lxdel="${kind}" data-i="${i}">Remove</button></div></div>
+    <label>Keywords (comma separated)</label>
+    <textarea style="min-height:56px" data-lx="${kind}" data-i="${i}" data-lf="words" aria-label="Keywords for ${esc(e.name)}">${esc(e.words.join(", "))}</textarea></div>`).join("");
+}
+function renderLexicon(){
+  $("lexicon").innerHTML=`<h3>Message themes</h3><p class="note">Matched against the <b>start</b> of each word in copy and reviews (e.g. "sustainab" catches sustainable and sustainability).</p>${lexRows("themes")}
+    <button data-lxadd="themes">+ Add theme</button>
+    <h3>Complaint topics</h3><p class="note">Matched anywhere inside review text, only in reviews that are not clearly positive.</p>${lexRows("pains")}
+    <button data-lxadd="pains">+ Add complaint topic</button> <button data-lxreset="1">Reset to defaults</button>`;
+}
+function renderInputs(){
+  applyLexicon();
+  $("category").value=state.category;
+  $("currency").value=state.currency;
+  $("brands").innerHTML = state.brands.map((b,i)=>`
+    <div class="brand ${b.isYou?"you":""}">
+      <div class="row">
+        <div><label>Brand name ${b.isYou?'<span class="tag">· YOUR BRAND</span>':""}</label>
+          <input type="text" data-b="${i}" data-f="name" value="${esc(b.name)}"></div>
+        <div><label>Price (${esc(state.currency)})</label>
+          <input type="number" min="0" data-b="${i}" data-f="price" value="${esc(b.price)}"></div>
+      </div>
+      <label>Messaging copy</label>
+      <textarea data-b="${i}" data-f="copy" placeholder="Paste homepage or product copy here" aria-label="Messaging copy for ${esc(b.name)}">${esc(b.copy)}</textarea>
+      <div class="note" id="wc-${i}">${wordNote(b.copy)}</div>
+      <details style="margin-top:8px" ${b.reviews?"open":""}><summary class="note">Customer reviews (optional, one per line)</summary>
+        <textarea data-b="${i}" data-f="reviews" aria-label="Customer reviews for ${esc(b.name)}" placeholder="Paste 5+ public reviews, one per line" style="margin-top:6px">${esc(b.reviews)}</textarea>
+        <div class="note" id="rc-${i}">${reviewNote(b.reviews)}</div></details>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        ${b.isYou?"":`<button data-me="${i}">Make this my brand</button>`}
+        ${state.brands.length>2?`<button class="danger" data-del="${i}">Remove</button>`:""}
+      </div>
+    </div>`).join("");
+
+  let h=`<thead><tr><th>Factor</th><th class="num">Weight</th>${state.brands.map(b=>`<th class="num">${esc(b.name||"Brand")}${b.isYou?" ★":""}</th>`).join("")}<th></th></tr></thead><tbody>`;
+  state.dims.forEach((d,k)=>{
+    h+=`<tr><td><input type="text" data-d="${k}" data-df="name" value="${esc(d.name)}" style="width:100%"></td>
+      <td class="num"><select data-d="${k}" data-df="weight">${[1,2,3,4,5].map(n=>`<option ${n===d.weight?"selected":""}>${n}</option>`).join("")}</select></td>
+      ${state.brands.map((b,i)=>`<td class="num"><select data-b="${i}" data-s="${k}">${[1,2,3,4,5].map(n=>`<option ${n===b.scores[k]?"selected":""}>${n}</option>`).join("")}</select></td>`).join("")}
+      <td>${state.dims.length>2?`<button class="danger" data-deld="${k}" title="Remove factor">×</button>`:""}</td></tr>`;
+  });
+  $("scoreTbl").innerHTML=h+"</tbody>";
+  renderLexicon();
+}
+
+/* ---------- Rendering: results ---------- */
+function heatCell(v,max){
+  const a = max? Math.min(1,v/max):0;
+  return `<td class="c" style="background:rgba(var(--heat),${(a*0.55).toFixed(2)})">${v>=0.05?round(v,1):"–"}</td>`;
+}
+function renderResults(){
+  const o=analyse(); window.__last=o;
+  const el=$("results");
+  if(o.warnings.length || o.ready<2){
+    el.innerHTML=`<div class="card"><div class="empty">${o.warnings.length?esc(o.warnings.join(" ")):"Paste at least 15 words of copy for two or more brands to see the analysis."}</div></div>`;
+    return;
+  }
+  const me=o.brands.find(b=>b.isYou);
+  const comps=o.brands.filter(b=>!b.isYou);
+  const rkS=rank(o.brands,"score",me), rkD=rank(o.brands,"distinct",me);
+  const whiteN=THEME_NAMES.filter(t=>o.themes[t].white).length;
+  const compCopy=comps.filter(b=>b.hasCopy);
+  const avgProof=mean(compCopy.map(b=>b.proof));
+  const kpi=(v,l,d,cls="")=>`<div class="kpi"><div class="v">${v}</div><div class="l">${l}</div><div class="d ${cls}">${d}</div></div>`;
+
+  const sm=summarise(o);
+  let html=`<div class="card"><span class="step">Results</span><h2>Summary</h2>
+    <p style="margin:6px 0 10px">${esc(sm.text)}</p>
+    <div class="insight strength"><div class="t"><span class="badge">Draft positioning angle</span>${esc(sm.angle)}</div>
+    <div class="e">Chosen because it is ${esc(sm.basis)}.</div><div class="a">${esc(sm.stmt)}</div></div>
+    <p class="note">Edit the bracketed part and test the line with real customers. It is a starting hypothesis, not a verdict.</p>
+    <h2 style="margin-top:18px">Headline metrics</h2>
+    <div class="kpis" style="margin-top:10px">
+      ${kpi(Math.round(me.score)+"/100","Weighted scorecard",rkS?`Rank ${rkS.pos} of ${rkS.of} · market avg ${Math.round(o.avgScore)}`:"", rkS&&rkS.pos===1?"good":"")}
+      ${kpi(me.distinct!==null?me.distinct+"/100":"–","Messaging distinctiveness",rkD?`Rank ${rkD.pos} of ${rkD.of}`:"Needs copy",me.distinct!==null&&me.distinct<=15?"bad":"")}
+      ${kpi(me.priceIdx?Math.round(me.priceIdx):"–","Price index (market = 100)",me.price?`${fmtMoney(me.price)} vs avg ${fmtMoney(o.avgPrice)}`:"Add prices")}
+      ${kpi(round(me.proof,1),"Proof per 100 words",avgProof?`Market avg ${round(avgProof,1)}`:"",avgProof&&me.proof<avgProof*0.7?"bad":avgProof&&me.proof>avgProof?"good":"")}
+      ${kpi(whiteN,"White-space themes",whiteN?"Unclaimed by anyone":"All themes are claimed",whiteN?"good":"")}
+    </div></div>`;
+
+  // priority moves
+  const moves=o.insights.filter(i=>i.type==="threat"||i.type==="opportunity").slice(0,3);
+  html+=`<div class="card"><h2>Top priority moves</h2><p class="note">Ranked by estimated impact: weight of the factor, size of the gap and how unclaimed the space is.</p>
+    ${moves.length?moves.map((m,i)=>`<div class="insight ${m.type}"><div class="t"><span class="badge">${i+1}. ${m.type}</span>${esc(m.title)}</div>
+      <div class="e">${esc(m.evidence)}</div><div class="a"><b>Do this:</b> ${esc(m.action)}</div></div>`).join(""):`<div class="empty">No major gaps detected from the data you entered.</div>`}</div>`;
+
+  // theme heatmap
+  const heatBrands=o.brands.filter(b=>b.hasCopy);
+  const maxAll=Math.max(0.01,...heatBrands.flatMap(b=>THEME_NAMES.map(t=>b.theme[t])));
+  html+=`<div class="card"><h2>Messaging map</h2><p class="note">Mentions of each theme per 100 words of copy. Darker means the brand talks about it more. The last column shows who owns the theme.</p>
+    <div class="scroll"><table class="tbl heat"><thead><tr><th>Theme</th>${heatBrands.map(b=>`<th class="num">${esc(b.name)}${b.isYou?" ★":""}</th>`).join("")}<th>Status</th></tr></thead><tbody>
+    ${THEME_NAMES.map(t=>{const th=o.themes[t];
+      const status=th.white?'<span class="good">White space</span>':th.owner?`Owned by ${esc(th.owner.name)}`:th.crowded?'<span class="warn">Crowded</span>':'<span class="muted">Contested</span>';
+      return `<tr><td>${esc(t)}</td>${heatBrands.map(b=>heatCell(b.theme[t],maxAll)).join("")}<td>${status}</td></tr>`;}).join("")}
+    </tbody></table></div></div>`;
+
+  // brand metrics table
+  html+=`<div class="card"><h2>Brand comparison</h2><div class="scroll"><table class="tbl"><thead><tr>
+    <th>Brand</th><th class="num">Score</th><th class="num">Price</th><th class="num">Price idx</th><th class="num">Value ratio</th><th class="num">Distinct.</th><th class="num">Proof</th><th class="num">Emotive %</th><th class="num">Reading ease</th><th class="num">CTAs</th></tr></thead><tbody>
+    ${o.brands.map(b=>`<tr><td>${esc(b.name)}${b.isYou?" ★":""}</td><td class="num">${Math.round(b.score)}</td>
+      <td class="num">${b.price?fmtMoney(b.price):"–"}</td><td class="num">${b.priceIdx?Math.round(b.priceIdx):"–"}</td>
+      <td class="num">${b.valueRatio?round(b.valueRatio,0):"–"}</td><td class="num">${b.distinct!==null?b.distinct:"–"}</td>
+      <td class="num">${b.hasCopy?round(b.proof,1):"–"}</td><td class="num">${b.emotive!==null?Math.round(b.emotive):"–"}</td>
+      <td class="num">${b.flesch!==null?Math.round(b.flesch):"–"}</td><td class="num">${b.hasCopy?b.ctas:"–"}</td></tr>`).join("")}
+    </tbody></table></div>
+    <p class="note">Value ratio = scorecard score ÷ price index (higher is better value). Distinctiveness = how different a brand's theme mix is from the rest. Proof = numbers and proof words per 100 words.</p></div>`;
+
+  // value map
+  html+=`<div class="card"><h2>Price vs. quality map</h2><p class="note">Top-left = high score at low price (best value). Bottom-right = expensive for what you get. Lines show market averages.</p>${valueMap(o)}</div>`;
+
+  // gaps
+  if(o.gaps.length){
+    html+=`<div class="card"><h2>Scorecard gaps vs. best competitor</h2><div class="scroll"><table class="tbl"><thead><tr><th>Factor</th><th class="num">Weight</th><th class="num">You</th><th class="num">Best rival</th><th>Rival</th><th>Gap</th></tr></thead><tbody>
+    ${o.gaps.slice().sort((a,b)=>b.gap*b.weight-a.gap*a.weight).map(g=>`<tr><td>${esc(g.dim)}</td><td class="num">${g.weight}</td><td class="num">${g.you}</td><td class="num">${g.best}</td><td>${esc(g.bestName)}</td>
+      <td style="min-width:130px">${g.gap>0?`<span class="bad">−${g.gap}</span>`:`<span class="good">${g.gap===0?"level":"+"+(-g.gap)}</span>`}
+      <div class="bar"><i style="width:${Math.max(0,g.gap)*25}%;background:var(--bad)"></i></div></td></tr>`).join("")}
+    </tbody></table></div></div>`;
+  }
+
+  // voice of customer
+  const vb=o.brands.filter(b=>b.voc);
+  if(vb.length){
+    const top=(map,minPct)=>{ const e=Object.entries(map).filter(x=>x[1]>=minPct).sort((a,b)=>b[1]-a[1])[0]; return e?`${esc(e[0])} (${Math.round(e[1])}%)`:"–"; };
+    const praise=v=>{ const e=THEME_NAMES.map(t=>[t,v.themes[t].pct,v.themes[t].sent]).filter(x=>x[1]>=15&&x[2]>0.1).sort((a,b)=>b[1]-a[1])[0]; return e?`${esc(e[0])} (${Math.round(e[1])}%)`:"–"; };
+    html+=`<div class="card"><h2>Voice of customer</h2><p class="note">What customers say in reviews. Sentiment runs from −1 (negative) to +1 (positive). Brands with fewer than 5 reviews are shown but not used for insights.</p>
+      <div class="scroll"><table class="tbl"><thead><tr><th>Brand</th><th class="num">Reviews</th><th class="num">% positive</th><th class="num">% negative</th><th class="num">Sentiment</th><th>Most praised</th><th>Top complaint</th></tr></thead><tbody>
+      ${vb.map(b=>`<tr><td>${esc(b.name)}${b.isYou?" ★":""}</td><td class="num">${b.voc.n}</td><td class="num">${Math.round(b.voc.pos)}</td><td class="num">${Math.round(b.voc.neg)}</td>
+        <td class="num ${b.voc.avg>0.2?"good":b.voc.avg<0?"bad":""}">${round(b.voc.avg,2)}</td><td>${praise(b.voc)}</td><td>${top(b.voc.pains,10)}</td></tr>`).join("")}</tbody></table></div>`;
+    if(me.voc&&me.voc.enough){
+      const rowsH=THEME_NAMES.filter(t=>me.theme[t]>=0.5||me.voc.themes[t].pct>=10).map(t=>{
+        const say=me.theme[t], s=me.voc.themes[t];
+        let read="", cls="muted";
+        if(say>=OWN_MIN&&s.pct>=15&&s.sent<=-0.1){read="Contradicted";cls="bad";}
+        else if(say>=OWN_MIN&&s.pct>=15&&s.sent>0){read="Aligned";cls="good";}
+        else if(say<OWN_MIN&&s.pct>=25&&s.sent>=0.2){read="Untapped praise";cls="good";}
+        else if(say>=OWN_MIN&&s.pct<10){read="Unproven claim";cls="warn";}
+        return `<tr><td>${esc(t)}</td><td class="num">${round(say,1)}</td><td class="num">${Math.round(s.pct)}%</td><td class="num">${s.pct?round(s.sent,2):"–"}</td><td class="${cls}">${read||"–"}</td></tr>`; }).join("");
+      html+=`<h3>What ${esc(me.name)} says vs what customers say</h3><div class="scroll"><table class="tbl"><thead><tr><th>Theme</th><th class="num">You say (per 100 words)</th><th class="num">Customers mention</th><th class="num">Sentiment</th><th>Read</th></tr></thead><tbody>${rowsH}</tbody></table></div>`;
+    } else html+=`<p class="note warn" style="margin-top:8px">Add at least 5 reviews for your own brand to unlock the say-vs-hear comparison.</p>`;
+    html+=`</div>`;
+  }
+
+  // all insights
+  html+=`<div class="card"><h2>All insights</h2>${o.insights.map(m=>`<div class="insight ${m.type}"><div class="t"><span class="badge">${m.type}</span>${esc(m.title)}</div>
+    <div class="e">${esc(m.evidence)}</div><div class="a"><b>Action:</b> ${esc(m.action)}</div></div>`).join("")||`<div class="empty">No insights yet.</div>`}</div>`;
+
+  html+=`<div class="card noprint"><h2>Export</h2><div class="btns">
+    <button class="primary" id="btnCopy">Copy report (Markdown)</button><button id="btnMd">Download .md</button>
+    <button id="btnJson">Download data (.json)</button><button id="btnPrint">Print / save PDF</button></div>
+    <p class="note" style="margin-top:10px"><b>Method.</b> Messaging metrics come from keyword themes in the copy you paste. They show what a brand says, not what customers believe. Scorecard scores are your own judgement, so back them with reviews, ad libraries and customer research. Treat this as a structured starting point for decisions.</p></div>`;
+  el.innerHTML=html;
+  $("btnCopy").onclick=()=>{ const md=toMarkdown(o); (navigator.clipboard?navigator.clipboard.writeText(md):Promise.reject()).then(()=>flash($("btnCopy"),"Copied!")).catch(()=>flash($("btnCopy"),"Copy failed, use download")); };
+  $("btnMd").onclick=()=>download("positioning-report.md",toMarkdown(o),"text/markdown");
+  $("btnJson").onclick=()=>download("positioning-data.json",JSON.stringify(state,null,2),"application/json");
+  $("btnPrint").onclick=()=>window.print();
+}
+function flash(btn,t){ const o=btn.textContent; btn.textContent=t; setTimeout(()=>btn.textContent=o,1500); }
+function download(name,text,type){
+  const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([text],{type})); a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),500);
+}
+
+function valueMap(o){
+  const pts=o.brands.filter(b=>b.priceIdx);
+  if(pts.length<2) return `<div class="empty">Add prices for at least two brands.</div>`;
+  const W=640,H=340,L=46,R=24,T=16,B=40;
+  const xs=pts.map(p=>p.priceIdx), ys=pts.map(p=>p.score);
+  const xmin=Math.max(0,Math.min(...xs)-15), xmax=Math.max(...xs)+15;
+  const ymin=Math.max(0,Math.min(...ys)-10), ymax=Math.min(100,Math.max(...ys)+10);
+  const X=v=>L+(v-xmin)/(xmax-xmin||1)*(W-L-R), Y=v=>H-B-(v-ymin)/(ymax-ymin||1)*(H-T-B);
+  let s=`<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Price versus scorecard score scatter plot">`;
+  s+=`<rect x="${L}" y="${T}" width="${W-L-R}" height="${H-T-B}" fill="none" stroke="var(--line)"/>`;
+  s+=`<line x1="${X(100)}" x2="${X(100)}" y1="${T}" y2="${H-B}" stroke="var(--line)" stroke-dasharray="4 4"/>`;
+  s+=`<line x1="${L}" x2="${W-R}" y1="${Y(o.avgScore)}" y2="${Y(o.avgScore)}" stroke="var(--line)" stroke-dasharray="4 4"/>`;
+  s+=`<text x="${(L+W-R)/2}" y="${H-8}" text-anchor="middle">Price index (market average = 100)</text>`;
+  s+=`<text transform="translate(12 ${(T+H-B)/2}) rotate(-90)" text-anchor="middle">Weighted score</text>`;
+  s+=`<text x="${L+6}" y="${T+14}">Better value</text><text x="${W-R-6}" y="${H-B-6}" text-anchor="end">Overpriced</text>`;
+  pts.forEach(p=>{
+    const x=X(p.priceIdx), y=Y(p.score), right = x < W-120;
+    s+=`<circle cx="${x}" cy="${y}" r="${p.isYou?9:6}" fill="${p.isYou?"var(--accent)":"var(--blue)"}" opacity="${p.isYou?1:.8}"/>`;
+    s+=`<text class="lbl" x="${x+(right?12:-12)}" y="${y+4}" text-anchor="${right?"start":"end"}" ${p.isYou?'font-weight="700"':""}>${esc(p.name)}</text>`;
+  });
+  return s+"</svg>";
+}
+
+/* ---------- Markdown report ---------- */
+function toMarkdown(o){
+  const me=o.brands.find(b=>b.isYou);
+  const L=[];
+  L.push(`# Positioning Gap Report${state.category?": "+state.category:""}`,"");
+  L.push(`Brand analysed: **${me.name}** vs ${o.brands.filter(b=>!b.isYou).map(b=>b.name).join(", ")}`,"");
+  const sm=summarise(o);
+  L.push("## Summary","",sm.text,"",`**Draft positioning angle (${sm.angle}):** ${sm.stmt}`,"");
+  L.push("## Top priority moves","");
+  o.insights.filter(i=>i.type==="threat"||i.type==="opportunity").slice(0,3).forEach((m,i)=>L.push(`${i+1}. **${m.title}**  \n   Evidence: ${m.evidence}  \n   Action: ${m.action}`));
+  L.push("","## Brand comparison","","| Brand | Score | Price | Price idx | Distinctiveness | Proof/100w | Emotive % |","|---|---|---|---|---|---|---|");
+  o.brands.forEach(b=>L.push(`| ${b.name}${b.isYou?" ★":""} | ${Math.round(b.score)} | ${b.price?fmtMoney(b.price):"-"} | ${b.priceIdx?Math.round(b.priceIdx):"-"} | ${b.distinct!==null?b.distinct:"-"} | ${b.hasCopy?round(b.proof,1):"-"} | ${b.emotive!==null?Math.round(b.emotive):"-"} |`));
+  L.push("","## Theme ownership","");
+  THEME_NAMES.forEach(t=>{const th=o.themes[t]; L.push(`- ${t}: ${th.white?"white space":th.owner?"owned by "+th.owner.name:th.crowded?"crowded":"contested"}`);});
+  const vb=o.brands.filter(b=>b.voc);
+  if(vb.length){
+    L.push("","## Voice of customer","","| Brand | Reviews | % positive | % negative | Sentiment |","|---|---|---|---|---|");
+    vb.forEach(b=>L.push(`| ${b.name}${b.isYou?" ★":""} | ${b.voc.n} | ${Math.round(b.voc.pos)} | ${Math.round(b.voc.neg)} | ${round(b.voc.avg,2)} |`));
+  }
+  L.push("","## All insights","");
+  o.insights.forEach(m=>L.push(`- **[${m.type}] ${m.title}**: ${m.evidence} → ${m.action}`));
+  L.push("","_Method: keyword-theme analysis of pasted copy plus a self-scored weighted scorecard. Validate with customer research._");
+  return L.join("\n");
+}
+
+/* ---------- Events ---------- */
+let saveTimer;
+function save(){ clearTimeout(saveTimer); saveTimer=setTimeout(()=>{ try{localStorage.setItem("pga-state",JSON.stringify(state));}catch(e){} },300); }
+function update(){ renderResults(); save(); }
+
+document.addEventListener("input",e=>{
+  const t=e.target;
+  if(t.id==="category"){state.category=t.value;update();return;}
+  if(t.id==="currency"){state.currency=t.value||"₹";update();return;}
+  if(t.dataset.lx!==undefined){
+    const e=state[t.dataset.lx][+t.dataset.i];
+    if(t.dataset.lf==="name") e.name=t.value.trim()||"Untitled";
+    else e.words=t.value.split(/[,\n]/).map(s=>s.trim().toLowerCase()).filter(Boolean);
+    applyLexicon(); update(); return;
+  }
+  if(t.dataset.f!==undefined){
+    state.brands[+t.dataset.b][t.dataset.f]=t.value; update();
+    if(t.dataset.f==="copy") $("wc-"+t.dataset.b).innerHTML=wordNote(t.value);
+    if(t.dataset.f==="reviews") $("rc-"+t.dataset.b).innerHTML=reviewNote(t.value);
+    return;
+  }
+  if(t.dataset.s!==undefined){ state.brands[+t.dataset.b].scores[+t.dataset.s]=+t.value; update(); return; }
+  if(t.dataset.df!==undefined){ const d=state.dims[+t.dataset.d]; d[t.dataset.df]=t.dataset.df==="weight"?+t.value:t.value; update(); }
+});
+document.addEventListener("change",e=>{ if(e.target.dataset.f==="name"){ renderInputs(); } });
+document.addEventListener("click",e=>{
+  const t=e.target;
+  if(t.dataset.lxdel!==undefined){
+    const k=t.dataset.lxdel; if(state[k].length>(k==="themes"?3:1)){ state[k].splice(+t.dataset.i,1); renderLexicon(); applyLexicon(); update(); }
+    else alert(k==="themes"?"Keep at least 3 themes.":"Keep at least 1 complaint topic.");
+  }
+  else if(t.dataset.lxadd!==undefined){ const k=t.dataset.lxadd; state[k].push({name:"New "+(k==="themes"?"theme":"topic"),words:[]}); renderLexicon(); applyLexicon(); update(); }
+  else if(t.dataset.lxreset!==undefined){ if(confirm("Reset all keyword lists to defaults?")){ delete state.themes; delete state.pains; applyLexicon(); renderLexicon(); update(); } }
+  else if(t.dataset.me!==undefined){ state.brands.forEach((b,i)=>b.isYou=i===+t.dataset.me); renderInputs(); update(); }
+  else if(t.dataset.del!==undefined){ const i=+t.dataset.del, was=state.brands[i].isYou; state.brands.splice(i,1); if(was) state.brands[0].isYou=true; renderInputs(); update(); }
+  else if(t.dataset.deld!==undefined){ const k=+t.dataset.deld; state.dims.splice(k,1); state.brands.forEach(b=>b.scores.splice(k,1)); renderInputs(); update(); }
+});
+$("btnAddBrand").onclick=()=>{ if(state.brands.length>=7) return; const b=mkBrand("Competitor "+String.fromCharCode(64+state.brands.length)); b.scores=state.dims.map(()=>3); state.brands.push(b); renderInputs(); update(); };
+$("btnAddDim").onclick=()=>{ state.dims.push({name:"New factor",weight:3}); state.brands.forEach(b=>b.scores.push(3)); renderInputs(); update(); };
+$("btnSample").onclick=()=>{ state=JSON.parse(JSON.stringify(SAMPLE)); renderInputs(); update(); };
+$("btnClear").onclick=()=>{ if(confirm("Clear all inputs?")){ state=blank(); renderInputs(); update(); } };
+
+$("btnTheme").onclick=()=>{
+  const dark=(document.documentElement.dataset.theme||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"))==="dark";
+  document.documentElement.dataset.theme=dark?"light":"dark";
+  try{localStorage.setItem("pga-theme",document.documentElement.dataset.theme);}catch(e){}
+};
+try{ const th=localStorage.getItem("pga-theme"); if(th) document.documentElement.dataset.theme=th; }catch(e){}
+$("btnImport").onclick=()=>$("fileImport").click();
+$("fileImport").onchange=e=>{
+  const f=e.target.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=()=>{
+    try{
+      const p=JSON.parse(r.result);
+      if(!p||!Array.isArray(p.brands)||!Array.isArray(p.dims)||!p.brands.length) throw new Error("bad shape");
+      p.brands.forEach(b=>{ b.name=String(b.name||""); b.copy=String(b.copy||""); b.reviews=String(b.reviews||""); b.scores=state.dims&&p.dims.map((_,k)=>Math.min(5,Math.max(1,+(b.scores&&b.scores[k])||3))); });
+      if(!p.brands.some(b=>b.isYou)) p.brands[0].isYou=true;
+      state=Object.assign(blank(),p); renderInputs(); update();
+    }catch(err){ alert("That file isn't a valid export from this tool."); }
+    e.target.value="";
+  };
+  r.readAsText(f);
+};
+try{ const s=localStorage.getItem("pga-state"); if(s){ const p=JSON.parse(s); if(p&&p.brands&&p.dims) state=p; } }catch(e){}
+if(state.brands.every(b=>!b.copy)) state=JSON.parse(JSON.stringify(SAMPLE));
+renderInputs(); renderResults();
+</script>
+</body>
+</html>
